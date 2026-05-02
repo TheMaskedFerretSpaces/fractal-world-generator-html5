@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <title>WORLD_GEN // TMF.SPACE_CORE</title>
     <style>
-        /* TMF.SPACE GLOBAL STYLES */
         body { 
             background-color: #000; 
             color: #00f0ff; 
@@ -16,7 +15,6 @@
             overflow-x: hidden;
         }
 
-        /* NEON HEADER */
         h1 {
             font-size: 1.5rem;
             letter-spacing: 4px;
@@ -25,16 +23,15 @@
             text-shadow: 0 0 10px #00f0ff;
         }
 
-        /* TERMINAL TOOLBAR */
         .toolbar { 
             background: rgba(0, 20, 30, 0.8);
             width: 90%; 
-            max-width: 1000px;
+            max-width: 1100px;
             padding: 20px; 
             display: flex; 
             flex-wrap: wrap; 
             justify-content: space-between; 
-            gap: 20px; 
+            gap: 15px; 
             border: 1px solid #00f0ff;
             box-shadow: 0 0 15px rgba(0, 240, 255, 0.2);
             margin-bottom: 20px;
@@ -58,11 +55,6 @@
             outline: none;
         }
 
-        select:focus, input:focus {
-            box-shadow: 0 0 8px #00f0ff;
-        }
-
-        /* GLOW BUTTON */
         button { 
             padding: 12px 24px; 
             background: #00f0ff; 
@@ -78,36 +70,30 @@
         button:hover { 
             background: #fff; 
             box-shadow: 0 0 20px #00f0ff;
-            transform: scale(1.05);
+            transform: scale(1.02);
         }
 
-        /* SCANLINE EFFECT OVER CANVAS */
         .canvas-container {
             position: relative;
             border: 1px solid #00f0ff;
             line-height: 0;
+            margin-bottom: 10px;
         }
 
+        /* Scanline Overlay */
         .canvas-container::after {
             content: " ";
             position: absolute;
             top: 0; left: 0; bottom: 0; right: 0;
-            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), 
-                        linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%), 
+                        linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
             background-size: 100% 4px, 3px 100%;
             pointer-events: none;
         }
 
-        canvas { 
-            background: #000; 
-            display: block;
-        }
+        canvas { background: #000; display: block; }
 
-        .status {
-            margin-top: 10px;
-            font-size: 12px;
-            opacity: 0.6;
-        }
+        .status { font-size: 11px; opacity: 0.6; letter-spacing: 1px; }
     </style>
 </head>
 <body>
@@ -116,7 +102,7 @@
 
     <div class="toolbar">
         <div class="control-group">
-            <label>Map_Projection</label>
+            <label>Projection</label>
             <select id="projection">
                 <option value="mercator">RECTILINEAR</option>
                 <option value="mollweide">MOLLWEIDE</option>
@@ -124,7 +110,7 @@
             </select>
         </div>
         <div class="control-group">
-            <label>Color_Profile</label>
+            <label>Profile</label>
             <select id="palette">
                 <option value="atlas">NEO_ATLAS</option>
                 <option value="antique">ARCHIVE</option>
@@ -133,8 +119,12 @@
             </select>
         </div>
         <div class="control-group">
-            <label>H2O_Saturation %</label>
+            <label>H2O_Sat %</label>
             <input type="number" id="water" value="70" min="0" max="100">
+        </div>
+        <div class="control-group">
+            <label>Ice_Cap %</label>
+            <input type="number" id="ice" value="10" min="0" max="50">
         </div>
         <div class="control-group">
             <label>Compute_Cycles</label>
@@ -147,7 +137,7 @@
         <canvas id="worldCanvas"></canvas>
     </div>
 
-    <div class="status" id="statusMsg">SYSTEM READY... awaiting input</div>
+    <div class="status" id="statusMsg">READY_FOR_SEQUENCING...</div>
 
 <script>
     const canvas = document.getElementById('worldCanvas');
@@ -158,25 +148,27 @@
     canvas.height = H;
 
     const Palettes = {
-        atlas: { sea: [0, 40, 80], land: [0, 150, 100], mt: [200, 255, 255] },
-        antique: { sea: [60, 50, 30], land: [150, 130, 90], mt: [255, 240, 200] },
-        martian: { sea: [50, 0, 0], land: [180, 40, 0], mt: [255, 180, 100] },
-        barren: { sea: [10, 10, 10], land: [80, 80, 80], mt: [200, 200, 200] }
+        atlas:   { sea: [0, 40, 80],   land: [0, 150, 100],  mt: [150, 150, 150], ice: [220, 240, 255] },
+        antique: { sea: [60, 50, 30],  land: [150, 130, 90],  mt: [100, 80, 60],   ice: [240, 235, 220] },
+        martian: { sea: [50, 0, 0],    land: [180, 40, 0],   mt: [100, 60, 40],   ice: [255, 200, 200] },
+        barren:  { sea: [10, 10, 10],  land: [80, 80, 80],   mt: [40, 40, 40],    ice: [255, 255, 255] }
     };
 
     async function generate() {
         const status = document.getElementById('statusMsg');
-        status.innerText = "INITIALIZING SEED... COMPUTING VECTORS...";
+        status.innerText = "ALLOCATING VECTORS... CALCULATING CRUSTAL DISPLACEMENT...";
         
-        // Brief timeout to allow UI to update status
         await new Promise(r => setTimeout(r, 50));
 
         const iter = parseInt(document.getElementById('iterations').value);
         const waterPct = parseInt(document.getElementById('water').value);
+        const icePct = parseInt(document.getElementById('ice').value) / 100;
         const palette = Palettes[document.getElementById('palette').value];
         const proj = document.getElementById('projection').value;
 
         let map = new Float32Array(W * H).fill(0);
+        
+        // --- Core Algorithm: Great Circle Faulting ---
         for(let i=0; i<iter; i++) {
             let phi = Math.random() * Math.PI * 2;
             let theta = Math.random() * Math.PI;
@@ -198,23 +190,34 @@
             }
         }
 
+        // Determine Sea Level
         let sorted = [...map].sort((a,b) => a-b);
         let seaLevel = sorted[Math.floor((waterPct/100) * (sorted.length-1))];
         let min = sorted[0], max = sorted[sorted.length-1];
 
         const img = ctx.createImageData(W, H);
+        
+        // --- Render Pass ---
         for(let y=0; y<H; y++) {
-            let lat = (y / H) * Math.PI - Math.PI/2;
+            // Latitude in degrees for ice calculation (-90 to 90)
+            let latDeg = (y / H) * 180 - 90; 
+            let absLat = Math.abs(latDeg); 
+            
+            // Ice logic: if absLat > (90 - ice_range), it's frozen
+            let isIceZone = absLat > (90 - (icePct * 90));
+
             for(let x=0; x<W; x++) {
-                let lon = (x / W) * 2 * Math.PI - Math.PI;
+                let latRad = (y / H) * Math.PI - Math.PI/2;
+                let lonRad = (x / W) * 2 * Math.PI - Math.PI;
                 let tx = x, skip = false;
 
+                // Handle Projections
                 if(proj === 'mollweide') {
-                    tx = W/2 + (W/2) * (lon/Math.PI) * Math.cos(lat);
-                    if(Math.abs(x - W/2) > (W/2) * Math.cos(lat)) skip = true;
+                    tx = W/2 + (W/2) * (lonRad/Math.PI) * Math.cos(latRad);
+                    if(Math.abs(x - W/2) > (W/2) * Math.cos(latRad)) skip = true;
                 } else if(proj === 'sinusoidal') {
-                    tx = W/2 + (x - W/2) * Math.cos(lat);
-                    if(Math.abs(x - W/2) > (W/2) * Math.cos(lat)) skip = true;
+                    tx = W/2 + (x - W/2) * Math.cos(latRad);
+                    if(Math.abs(x - W/2) > (W/2) * Math.cos(latRad)) skip = true;
                 }
 
                 if(skip) continue;
@@ -223,12 +226,21 @@
                 let outIdx = (y*W + Math.floor(tx)) * 4;
                 let color = [0,0,0];
 
-                if(h <= seaLevel) {
+                if (isIceZone) {
+                    // Polar Ice Color
+                    color = palette.ice;
+                } else if(h <= seaLevel) {
+                    // Water
                     let d = (h - min) / (seaLevel - min);
                     color = palette.sea.map(c => c * (0.4 + d*0.6));
                 } else {
+                    // Land/Mountains
                     let d = (h - seaLevel) / (max - seaLevel);
-                    color = palette.land.map((c, i) => c + (palette.mt[i] - c) * d);
+                    if (d > 0.8) { // High altitude snow
+                         color = palette.ice.map((c, i) => c * 0.9);
+                    } else {
+                         color = palette.land.map((c, i) => c + (palette.mt[i] - c) * d);
+                    }
                 }
 
                 img.data[outIdx] = color[0];
@@ -239,9 +251,10 @@
         }
         ctx.clearRect(0,0,W,H);
         ctx.putImageData(img, 0, 0);
-        status.innerText = "RENDER COMPLETE. STANDBY.";
+        status.innerText = "RENDER_COMPLETE // ICE_CAPS_STABILIZED";
     }
 
+    // Run on initial load
     generate();
 </script>
 </body>
