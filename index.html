@@ -38,8 +38,8 @@
             transition: all 0.3s;
         }
         button:hover { background: #fff; box-shadow: 0 0 20px #00f0ff; transform: scale(1.02); }
-
-        .canvas-container { position: relative; border: 1px solid #00f0ff; margin: 20px 0; line-height: 0; }
+        
+                .canvas-container { position: relative; border: 1px solid #00f0ff; margin: 20px 0; line-height: 0; }
         
         /* CRT Scanline Effect */
         .canvas-container::after {
@@ -58,6 +58,8 @@
 
         canvas { background: #000; display: block; }
         .status { font-size: 11px; opacity: 0.6; margin-bottom: 30px; letter-spacing: 1px; }
+
+                /* Simple blinking cursor effect for loader */
         .blink { animation: blinker 1s linear infinite; }
         @keyframes blinker { 50% { opacity: 0; } }
     </style>
