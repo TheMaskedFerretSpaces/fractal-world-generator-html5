@@ -2,50 +2,152 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Donjon World Generator Pro</title>
+    <title>WORLD_GEN // TMF.SPACE_CORE</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #1a1a1a; color: #ddd; margin: 0; display: flex; flex-direction: column; align-items: center; }
-        .toolbar { background: #2d2d2d; width: 100%; padding: 15px; display: flex; flex-wrap: wrap; justify-content: center; gap: 15px; border-bottom: 2px solid #444; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
-        .control-group { display: flex; flex-direction: column; align-items: flex-start; }
-        label { font-size: 12px; text-transform: uppercase; margin-bottom: 4px; color: #888; }
-        select, input { background: #3d3d3d; color: white; border: 1px solid #555; padding: 5px; border-radius: 4px; }
-        button { padding: 10px 20px; background: #d4a017; color: black; border: none; font-weight: bold; cursor: pointer; border-radius: 4px; align-self: flex-end; }
-        button:hover { background: #ffcc33; }
-        canvas { margin-top: 30px; box-shadow: 0 0 30px rgba(0,0,0,0.8); background: #000; border: 1px solid #333; }
+        /* TMF.SPACE GLOBAL STYLES */
+        body { 
+            background-color: #000; 
+            color: #00f0ff; 
+            font-family: 'Courier New', Courier, monospace; 
+            margin: 0; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center;
+            overflow-x: hidden;
+        }
+
+        /* NEON HEADER */
+        h1 {
+            font-size: 1.5rem;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            margin: 20px 0;
+            text-shadow: 0 0 10px #00f0ff;
+        }
+
+        /* TERMINAL TOOLBAR */
+        .toolbar { 
+            background: rgba(0, 20, 30, 0.8);
+            width: 90%; 
+            max-width: 1000px;
+            padding: 20px; 
+            display: flex; 
+            flex-wrap: wrap; 
+            justify-content: space-between; 
+            gap: 20px; 
+            border: 1px solid #00f0ff;
+            box-shadow: 0 0 15px rgba(0, 240, 255, 0.2);
+            margin-bottom: 20px;
+        }
+
+        .control-group { display: flex; flex-direction: column; gap: 8px; }
+
+        label { 
+            font-size: 10px; 
+            color: #00f0ff; 
+            opacity: 0.7;
+            text-transform: uppercase; 
+        }
+
+        select, input { 
+            background: #000; 
+            color: #00f0ff; 
+            border: 1px solid #00f0ff; 
+            padding: 8px; 
+            font-family: monospace;
+            outline: none;
+        }
+
+        select:focus, input:focus {
+            box-shadow: 0 0 8px #00f0ff;
+        }
+
+        /* GLOW BUTTON */
+        button { 
+            padding: 12px 24px; 
+            background: #00f0ff; 
+            color: #000; 
+            border: none; 
+            font-family: monospace;
+            font-weight: bold; 
+            cursor: pointer; 
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+        }
+
+        button:hover { 
+            background: #fff; 
+            box-shadow: 0 0 20px #00f0ff;
+            transform: scale(1.05);
+        }
+
+        /* SCANLINE EFFECT OVER CANVAS */
+        .canvas-container {
+            position: relative;
+            border: 1px solid #00f0ff;
+            line-height: 0;
+        }
+
+        .canvas-container::after {
+            content: " ";
+            position: absolute;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), 
+                        linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            background-size: 100% 4px, 3px 100%;
+            pointer-events: none;
+        }
+
+        canvas { 
+            background: #000; 
+            display: block;
+        }
+
+        .status {
+            margin-top: 10px;
+            font-size: 12px;
+            opacity: 0.6;
+        }
     </style>
 </head>
 <body>
 
+    <h1>> WORLD_GENERATOR_V2.2a</h1>
+
     <div class="toolbar">
         <div class="control-group">
-            <label>Projection</label>
+            <label>Map_Projection</label>
             <select id="projection">
-                <option value="mercator">Square Mercator</option>
-                <option value="mollweide">Mollweide</option>
-                <option value="sinusoidal">Sinusoidal</option>
+                <option value="mercator">RECTILINEAR</option>
+                <option value="mollweide">MOLLWEIDE</option>
+                <option value="sinusoidal">SINUSOIDAL</option>
             </select>
         </div>
         <div class="control-group">
-            <label>Palette</label>
+            <label>Color_Profile</label>
             <select id="palette">
-                <option value="atlas">Atlas</option>
-                <option value="antique">Antique</option>
-                <option value="martian">Martian</option>
-                <option value="barren">Barren</option>
+                <option value="atlas">NEO_ATLAS</option>
+                <option value="antique">ARCHIVE</option>
+                <option value="martian">OUTPOST_01</option>
+                <option value="barren">VOID_MAP</option>
             </select>
         </div>
         <div class="control-group">
-            <label>% Water</label>
+            <label>H2O_Saturation %</label>
             <input type="number" id="water" value="70" min="0" max="100">
         </div>
         <div class="control-group">
-            <label>Iterations</label>
-            <input type="number" id="iterations" value="1500" min="100" max="5000">
+            <label>Compute_Cycles</label>
+            <input type="number" id="iterations" value="1200" min="100" max="5000">
         </div>
-        <button onclick="generate()">Generate World</button>
+        <button onclick="generate()">[ EXECUTE ]</button>
     </div>
 
-    <canvas id="worldCanvas"></canvas>
+    <div class="canvas-container">
+        <canvas id="worldCanvas"></canvas>
+    </div>
+
+    <div class="status" id="statusMsg">SYSTEM READY... awaiting input</div>
 
 <script>
     const canvas = document.getElementById('worldCanvas');
@@ -56,19 +158,24 @@
     canvas.height = H;
 
     const Palettes = {
-        atlas: { sea: [0, 50, 120], land: [34, 139, 34], mt: [255, 255, 255] },
-        antique: { sea: [170, 160, 130], land: [210, 190, 150], mt: [120, 100, 80] },
-        martian: { sea: [80, 20, 20], land: [180, 60, 40], mt: [255, 200, 150] },
-        barren: { sea: [50, 50, 50], land: [120, 120, 120], mt: [220, 220, 220] }
+        atlas: { sea: [0, 40, 80], land: [0, 150, 100], mt: [200, 255, 255] },
+        antique: { sea: [60, 50, 30], land: [150, 130, 90], mt: [255, 240, 200] },
+        martian: { sea: [50, 0, 0], land: [180, 40, 0], mt: [255, 180, 100] },
+        barren: { sea: [10, 10, 10], land: [80, 80, 80], mt: [200, 200, 200] }
     };
 
-    function generate() {
+    async function generate() {
+        const status = document.getElementById('statusMsg');
+        status.innerText = "INITIALIZING SEED... COMPUTING VECTORS...";
+        
+        // Brief timeout to allow UI to update status
+        await new Promise(r => setTimeout(r, 50));
+
         const iter = parseInt(document.getElementById('iterations').value);
         const waterPct = parseInt(document.getElementById('water').value);
         const palette = Palettes[document.getElementById('palette').value];
         const proj = document.getElementById('projection').value;
 
-        // Generate heightmap (same logic as C code)
         let map = new Float32Array(W * H).fill(0);
         for(let i=0; i<iter; i++) {
             let phi = Math.random() * Math.PI * 2;
@@ -79,51 +186,46 @@
 
             for(let y=0; y<H; y++) {
                 let lat = (Math.PI * y) / H - Math.PI/2;
+                let cosLat = Math.cos(lat);
+                let sinLat = Math.sin(lat);
                 for(let x=0; x<W; x++) {
                     let lon = (Math.PI * 2 * x) / W - Math.PI;
-                    let px = Math.cos(lon) * Math.cos(lat);
-                    let py = Math.sin(lon) * Math.cos(lat);
-                    let pz = Math.sin(lat);
+                    let px = Math.cos(lon) * cosLat;
+                    let py = Math.sin(lon) * cosLat;
+                    let pz = sinLat;
                     map[y*W + x] += (px*nx + py*ny + pz*nz > 0) ? 1 : -1;
                 }
             }
         }
 
-        // Determine Sea Level
         let sorted = [...map].sort((a,b) => a-b);
         let seaLevel = sorted[Math.floor((waterPct/100) * (sorted.length-1))];
         let min = sorted[0], max = sorted[sorted.length-1];
 
-        // Render with Projection
         const img = ctx.createImageData(W, H);
         for(let y=0; y<H; y++) {
+            let lat = (y / H) * Math.PI - Math.PI/2;
             for(let x=0; x<W; x++) {
-                let targetX = x, targetY = y;
-                
-                // Projection Logic
-                let lat = (y / H) * Math.PI - Math.PI/2;
                 let lon = (x / W) * 2 * Math.PI - Math.PI;
-                let skip = false;
+                let tx = x, skip = false;
 
                 if(proj === 'mollweide') {
-                    // Approximate Mollweide
-                    targetX = W/2 + (W/2) * (lon/Math.PI) * Math.cos(lat);
+                    tx = W/2 + (W/2) * (lon/Math.PI) * Math.cos(lat);
                     if(Math.abs(x - W/2) > (W/2) * Math.cos(lat)) skip = true;
                 } else if(proj === 'sinusoidal') {
-                    targetX = W/2 + (x - W/2) * Math.cos(lat);
+                    tx = W/2 + (x - W/2) * Math.cos(lat);
                     if(Math.abs(x - W/2) > (W/2) * Math.cos(lat)) skip = true;
                 }
 
                 if(skip) continue;
 
                 let h = map[y*W + x];
-                let idx = (Math.floor(y)*W + Math.floor(x)) * 4;
-                let outIdx = (y*W + Math.floor(targetX)) * 4;
-                
+                let outIdx = (y*W + Math.floor(tx)) * 4;
                 let color = [0,0,0];
+
                 if(h <= seaLevel) {
                     let d = (h - min) / (seaLevel - min);
-                    color = palette.sea.map(c => c * (0.5 + d*0.5));
+                    color = palette.sea.map(c => c * (0.4 + d*0.6));
                 } else {
                     let d = (h - seaLevel) / (max - seaLevel);
                     color = palette.land.map((c, i) => c + (palette.mt[i] - c) * d);
@@ -137,6 +239,7 @@
         }
         ctx.clearRect(0,0,W,H);
         ctx.putImageData(img, 0, 0);
+        status.innerText = "RENDER COMPLETE. STANDBY.";
     }
 
     generate();
