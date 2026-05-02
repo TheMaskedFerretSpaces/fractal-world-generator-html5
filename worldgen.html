@@ -4,23 +4,53 @@
     <meta charset="UTF-8">
     <title>WORLD_GEN // TMF.SPACE_CORE</title>
     <style>
+        /* TMF.SPACE STYLE OVERRIDE */
         body { background: #000; color: #00f0ff; font-family: 'Courier New', monospace; margin: 0; display: flex; flex-direction: column; align-items: center; }
         h1 { font-size: 1.5rem; letter-spacing: 4px; text-shadow: 0 0 10px #00f0ff; margin: 20px 0; }
-        .toolbar { background: rgba(0, 20, 30, 0.8); width: 90%; max-width: 1100px; padding: 20px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 15px; border: 1px solid #00f0ff; box-shadow: 0 0 15px rgba(0, 240, 255, 0.2); }
+        
+        .toolbar { 
+            background: rgba(0, 20, 30, 0.8); width: 90%; max-width: 1100px; padding: 20px; 
+            display: flex; flex-wrap: wrap; justify-content: space-between; gap: 15px; 
+            border: 1px solid #00f0ff; box-shadow: 0 0 15px rgba(0, 240, 255, 0.2); 
+        }
+        
         .control-group { display: flex; flex-direction: column; gap: 8px; }
         label { font-size: 10px; opacity: 0.7; text-transform: uppercase; }
         select, input { background: #000; color: #00f0ff; border: 1px solid #00f0ff; padding: 8px; font-family: monospace; outline: none; }
-        button { padding: 12px 24px; background: #00f0ff; color: #000; border: none; font-family: monospace; font-weight: bold; cursor: pointer; text-transform: uppercase; }
+        
+        button { 
+            padding: 12px 24px; background: #00f0ff; color: #000; border: none; 
+            font-family: monospace; font-weight: bold; cursor: pointer; text-transform: uppercase; 
+        }
         button:hover { background: #fff; box-shadow: 0 0 20px #00f0ff; }
-        .canvas-container { position: relative; border: 1px solid #00f0ff; margin: 20px 0; }
-        .canvas-container::after { content: " "; position: absolute; top: 0; left: 0; bottom: 0; right: 0; background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%); background-size: 100% 4px; pointer-events: none; }
+
+        .canvas-container { position: relative; border: 1px solid #00f0ff; margin: 20px 0; overflow: hidden; }
+        
+        /* Loading Overlay Style */
+        #loader {
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.8); display: none;
+            flex-direction: column; justify-content: center; align-items: center;
+            z-index: 10; color: #fff; text-shadow: 0 0 5px #00f0ff;
+        }
+
+        .canvas-container::after { 
+            content: " "; position: absolute; top: 0; left: 0; bottom: 0; right: 0; 
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%); 
+            background-size: 100% 4px; pointer-events: none; z-index: 5;
+        }
+        
         canvas { background: #000; display: block; }
-        .status { font-size: 11px; opacity: 0.6; }
+        .status { font-size: 11px; opacity: 0.6; margin-bottom: 20px; }
+
+        /* Simple blinking cursor effect for loader */
+        .blink { animation: blinker 1s linear infinite; }
+        @keyframes blinker { 50% { opacity: 0; } }
     </style>
 </head>
 <body>
 
-    <h1>> WORLD_GENERATOR_V2.3</h1>
+    <h1>> WORLD_GENERATOR_V2.4</h1>
 
     <div class="toolbar">
         <div class="control-group">
@@ -37,7 +67,7 @@
         </div>
         <div class="control-group">
             <label>Ice_Coverage %</label>
-            <input type="number" id="ice" value="15" min="0" max="50">
+            <input type="number" id="ice" value="15" min="0" max="45">
         </div>
         <div class="control-group">
             <label>H2O %</label>
@@ -51,18 +81,22 @@
     </div>
 
     <div class="canvas-container">
+        <div id="loader">
+            <div class="blink">GEN_IN_PROGRESS...</div>
+            <div style="font-size: 10px; margin-top: 10px;">MAPPING_TECTONICS</div>
+        </div>
         <canvas id="worldCanvas"></canvas>
     </div>
 
-    <div class="status" id="statusMsg">READY_FOR_SEQUENCING...</div>
+    <div class="status" id="statusMsg">SYSTEM_IDLE // STANDBY_FOR_INPUT</div>
 
 <script>
     const canvas = document.getElementById('worldCanvas');
     const ctx = canvas.getContext('2d');
+    const loader = document.getElementById('loader');
     const W = 1000, H = 500;
     canvas.width = W; canvas.height = H;
 
-    // Deterministic Random Number Generator (LCG)
     let _seed = 1;
     function seededRandom() {
         _seed = (_seed * 1664525 + 1013904223) % 4294967296;
@@ -70,11 +104,15 @@
     }
 
     async function generate() {
-        _seed = parseInt(document.getElementById('seed').value);
+        // Show loader and update status
+        loader.style.display = 'flex';
         const status = document.getElementById('statusMsg');
-        status.innerText = "PRNG INITIALIZED... COMPUTING TECTONICS...";
-        await new Promise(r => setTimeout(r, 50));
+        status.innerText = "ALLOCATING_RESOURCES... COMPUTING_FRACTAL_VECTORS...";
+        
+        // Give the browser a frame to render the loader
+        await new Promise(r => setTimeout(r, 100));
 
+        _seed = parseInt(document.getElementById('seed').value);
         const iter = parseInt(document.getElementById('iterations').value);
         const waterPct = parseInt(document.getElementById('water').value);
         const iceFactor = parseInt(document.getElementById('ice').value) / 100;
@@ -82,7 +120,7 @@
 
         let map = new Float32Array(W * H).fill(0);
         
-        // --- Core Algorithm (Faulting) with Seeded Random ---
+        // Faulting Algorithm
         for(let i=0; i<iter; i++) {
             let phi = seededRandom() * Math.PI * 2;
             let theta = seededRandom() * Math.PI;
@@ -108,19 +146,23 @@
         const img = ctx.createImageData(W, H);
         
         for(let y=0; y<H; y++) {
-            let latNorm = (y / H); // 0 to 1
+            let latNorm = (y / H); 
             let latRad = latNorm * Math.PI - Math.PI/2;
 
             for(let x=0; x<W; x++) {
                 let h = map[y*W + x];
                 let lonRad = (x / W) * 2 * Math.PI - Math.PI;
                 
-                // --- Noisy Ice Cap Logic ---
-                // Ice threshold deviates based on elevation and a bit of seeded variation
-                let distFromPole = latNorm < 0.5 ? latNorm : 1 - latNorm; 
+                // --- NOISY DUAL POLE ICE LOGIC ---
+                // distanceFromPole is 0 at poles (0 or 1) and 0.5 at equator
+                let distFromNearestPole = latNorm < 0.5 ? latNorm : 1 - latNorm; 
+                
+                // Variation based on heightmap + seeded randomness for jagged edges
                 let elevationInfluence = (h - seaLevel) / (max - seaLevel);
-                let iceNoise = (h / max) * 0.05; // Use heightmap as noise source
-                let isIce = distFromPole < (iceFactor / 2) + iceNoise + (elevationInfluence * 0.05);
+                let iceNoise = (h / max) * 0.04; 
+                
+                // If point is close enough to either North or South pole
+                let isIce = distFromNearestPole < (iceFactor / 2) + iceNoise + (Math.max(0, elevationInfluence) * 0.05);
 
                 let tx = x, skip = false;
                 if(proj === 'mollweide') {
@@ -136,15 +178,17 @@
                 let r, g, b;
 
                 if (isIce) {
-                    // Ice color changes based on height: deep blue-white to pure white
+                    // Ice: Elevation determines blue-to-white gradient
                     let d = (h - min) / (max - min);
-                    r = 200 + (d * 55); g = 220 + (d * 35); b = 255;
+                    r = 190 + (d * 65); g = 210 + (d * 45); b = 255;
                 } else if(h <= seaLevel) {
+                    // Water: Depth mapping
                     let d = (h - min) / (seaLevel - min);
-                    r = 0; g = 40 * d; b = 80 + (d * 100);
+                    r = 0; g = 30 * d; b = 60 + (d * 120);
                 } else {
+                    // Land: Altitude mapping
                     let d = (h - seaLevel) / (max - seaLevel);
-                    r = 20 + (d * 180); g = 120 - (d * 40); b = 40;
+                    r = 15 + (d * 180); g = 100 - (d * 30); b = 30;
                 }
 
                 img.data[outIdx] = r; img.data[outIdx+1] = g; img.data[outIdx+2] = b; img.data[outIdx+3] = 255;
@@ -152,9 +196,14 @@
         }
         ctx.clearRect(0,0,W,H);
         ctx.putImageData(img, 0, 0);
-        status.innerText = "SEQUENCE TERMINATED. STABLE WORLD DETECTED.";
+        
+        // Hide loader and finish status
+        loader.style.display = 'none';
+        status.innerText = "SEQUENCE_COMPLETE // DATA_STABILIZED";
     }
-   // generate();
+
+    // Manual start required per user request
+    // generate(); 
 </script>
 </body>
 </html>
