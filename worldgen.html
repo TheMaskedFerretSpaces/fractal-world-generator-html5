@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fractal World Generator (Donjon Port)</title>
+    <style>
+        body { font-family: sans-serif; background: #222; color: #eee; text-align: center; padding: 20px; }
+        canvas { border: 2px solid #555; background: #000; max-width: 100%; height: auto; margin-top: 20px; }
+        .controls { background: #333; padding: 15px; border-radius: 8px; display: inline-block; }
+        input { width: 60px; margin-right: 10px; }
+        button { padding: 5px 15px; cursor: pointer; background: #06c; color: white; border: none; border-radius: 4px; }
+        button:hover { background: #0088ff; }
+    </style>
+</head>
+<body>
+
+    <h1>Fractal World Generator</h1>
+    <div class="controls">
+        Iterations: <input type="number" id="iterations" value="1000" min="10" max="10000">
+        Water %: <input type="number" id="water" value="70" min="0" max="100">
+        <button onclick="generateWorld()">Generate New World</button>
+    </div>
+    <br>
+    <canvas id="worldCanvas"></canvas>
+
+<script>
+    const canvas = document.getElementById('worldCanvas');
+    const ctx = canvas.getContext('2d');
+
+    // Configuration matching the C code structure
+    const WIDTH = 800;
+    const HEIGHT = 400;
+    canvas.width = WIDTH;
+    canvas.height = HEIGHT;
+
+    function generateWorld() {
+        const iterations = parseInt(document.getElementById('iterations').value);
+        const waterPercent = parseInt(document.getElementById('water').value);
+        
+        // Initialize height map (elevation)
+        let heightMap = new Float32Array(WIDTH * HEIGHT).fill(0);
+
+        // Core Algorithm: Faulting (Random Great Circles)
+        // Ported from worldgen-2.2a.c logic
+        for (let i = 0; i < iterations; i++) {
+            // Pick a random point on the sphere
+            let phi = Math.random() * Math.PI * 2;
+            let theta = Math.random() * Math.PI;
+
+            // Normal vector to the random great circle
+            let nx = Math.cos(phi) * Math.sin(theta);
+            let ny = Math.sin(phi) * Math.sin(theta);
+            let nz = Math.cos(theta);
+
+            for (let y = 0; y < HEIGHT; y++) {
+                // Map Y to latitude
+                let lat = (Math.PI * y) / HEIGHT - Math.PI / 2;
+                let cosLat = Math.cos(lat);
+                let sinLat = Math.sin(lat);
+
+                for (let x = 0; x < WIDTH; x++) {
+                    // Map X to longitude
+                    let lon = (Math.PI * 2 * x) / WIDTH - Math.PI;
+                    
+                    // Convert Spherical to Cartesian
+                    let px = Math.cos(lon) * cosLat;
+                    let py = Math.sin(lon) * cosLat;
+                    let pz = sinLat;
+
+                    // Dot product determines which side of the circle the point is on
+                    if (px * nx + py * ny + pz * nz > 0) {
+                        heightMap[y * WIDTH + x] += 1;
+                    } else {
+                        heightMap[y * WIDTH + x] -= 1;
+                    }
+                }
+            }
+        }
+
+        render(heightMap, waterPercent);
+    }
+
+    function render(heightMap, waterPercent) {
+        // Find sea level based on the percentile (waterPercent)
+        let sorted = [...heightMap].sort((a, b) => a - b);
+        let seaLevel = sorted[Math.floor((waterPercent / 100) * (sorted.length - 1))];
+        
+        let min = sorted[0];
+        let max = sorted[sorted.length - 1];
+
+        const imgData = ctx.createImageData(WIDTH, HEIGHT);
+
+        for (let i = 0; i < heightMap.length; i++) {
+            let h = heightMap[i];
+            let r, g, b;
+
+            if (h <= seaLevel) {
+                // Water: Dark blue to light blue
+                let depth = (h - min) / (seaLevel - min);
+                r = 0;
+                g = Math.floor(50 * depth);
+                b = Math.floor(100 + 155 * depth);
+            } else {
+                // Land: Green to Brown to White (mountains)
+                let alt = (h - seaLevel) / (max - seaLevel);
+                if (alt < 0.5) {
+                    r = Math.floor(34 + 100 * alt);
+                    g = Math.floor(139 - 50 * alt);
+                    b = 34;
+                } else {
+                    r = Math.floor(139 + 116 * (alt - 0.5));
+                    g = Math.floor(89 + 166 * (alt - 0.5));
+                    b = Math.floor(34 + 221 * (alt - 0.5));
+                }
+            }
+
+            imgData.data[i * 4] = r;     // R
+            imgData.data[i * 4 + 1] = g; // G
+            imgData.data[i * 4 + 2] = b; // B
+            imgData.data[i * 4 + 3] = 255; // Alpha
+        }
+
+        ctx.putImageData(imgData, 0, 0);
+    }
+
+    // Run on load
+    generateWorld();
+</script>
+</body>
+</html>
